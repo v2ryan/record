@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voice Recorder & Transcript</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0f172a;
+      --panel: #020617;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.15);
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --danger: #f97373;
+      --border: #1f2937;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top, #1e293b, #020617 55%);
+      color: var(--text-main);
+      padding: 24px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 960px;
+      background: linear-gradient(135deg, #020617, #020617 40%, #111827);
+      border-radius: 24px;
+      border: 1px solid #1f2937;
+      box-shadow:
+        0 24px 80px rgba(15, 23, 42, 0.9),
+        0 0 0 1px rgba(148, 163, 184, 0.15);
+      padding: 24px 24px 18px;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 16px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .title {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #e5e7eb;
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .tag {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      color: var(--text-muted);
+    }
+
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .left-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: #4b5563;
+      box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+      transition: all 0.15s ease-out;
+    }
+
+    .dot.recording {
+      background: #f97373;
+      box-shadow: 0 0 0 6px rgba(248, 113, 113, 0.2);
+    }
+
+    .pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background: radial-gradient(circle at top, #020617, #020617 70%, #020617);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .pill-label {
+      opacity: 0.8;
+    }
+
+    select {
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-size: 0.8rem;
+      outline: none;
+      padding-right: 2px;
+    }
+
+    select option {
+      background: #020617;
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    button {
+      border-radius: 999px;
+      border: 1px solid transparent;
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text-main);
+      transition: all 0.15s ease-out;
+      white-space: nowrap;
+    }
+
+    button span.icon {
+      font-size: 0.9rem;
+    }
+
+    button.primary {
+      background: radial-gradient(circle at top left, #38bdf8, #0ea5e9 35%, #0369a1);
+      border-color: rgba(125, 211, 252, 0.2);
+      color: #0b1120;
+      font-weight: 600;
+      box-shadow:
+        0 12px 30px rgba(8, 47, 73, 0.9),
+        0 0 0 1px rgba(56, 189, 248, 0.2);
+    }
+
+    button.primary:disabled {
+      opacity: 0.5;
+      cursor: default;
+      box-shadow: none;
+    }
+
+    button.secondary {
+      border-color: rgba(148, 163, 184, 0.5);
+      background: radial-gradient(circle at top, #020617, #020617 70%, #020617);
+      color: var(--text-muted);
+    }
+
+    button.danger {
+      border-color: rgba(248, 113, 113, 0.5);
+      color: #fecaca;
+      background: radial-gradient(circle at top, #450a0a, #7f1d1d 65%, #450a0a);
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.7);
+      opacity: 0.95;
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: 0 0 0 rgba(15, 23, 42, 0.9);
+      opacity: 0.9;
+    }
+
+    button:disabled {
+      cursor: default;
+      opacity: 0.5;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    @media (max-width: 800px) {
+      main {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .card {
+      border-radius: 18px;
+      background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.12), transparent 55%),
+                  radial-gradient(circle at bottom right, rgba(15, 23, 42, 0.9), #020617 70%);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      padding: 12px 12px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 220px;
+    }
+
+    .card.secondary-card {
+      background: radial-gradient(circle at top right, rgba(56, 189, 248, 0.08), transparent 55%),
+                  radial-gradient(circle at bottom left, rgba(15, 23, 42, 0.9), #020617 70%);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 500;
+      color: #e5e7eb;
+    }
+
+    .badge {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      color: var(--text-muted);
+    }
+
+    textarea {
+      flex: 1;
+      width: 100%;
+      resize: vertical;
+      min-height: 150px;
+      max-height: 260px;
+      padding: 9px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(31, 41, 55, 0.9);
+      background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.9), #020617 70%);
+      color: var(--text-main);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      outline: none;
+    }
+
+    textarea::placeholder {
+      color: rgba(148, 163, 184, 0.8);
+    }
+
+    textarea:focus {
+      border-color: rgba(56, 189, 248, 0.7);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.35);
+    }
+
+    .helper {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .footer {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(31, 41, 55, 0.9);
+      padding-top: 8px;
+    }
+
+    .status-text {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-text strong {
+      color: #e5e7eb;
+      font-weight: 500;
+    }
+
+    .error {
+      color: var(--danger);
+    }
+
+    .link-soft {
+      color: var(--accent);
+      text-decoration: none;
+      opacity: 0.8;
+    }
+
+    .link-soft:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="title">
+        <h1>Voice to Transcript & Summary</h1>
+        <div class="subtitle">Record speech → 逐字稿 transcript → Auto summary (browser only)</div>
+      </div>
+      <div class="tag">Static HTML · Works on Chrome</div>
+    </header>
+
+    <div class="controls-row">
+      <div class="left-controls">
+        <div class="status">
+          <div id="statusDot" class="dot"></div>
+          <span id="statusLabel">Idle · Click "Start" to record</span>
+        </div>
+        <div class="pill">
+          <span class="pill-label">Language</span>
+          <select id="language">
+            <option value="yue-Hant-HK">粵語（香港 Cantonese）</option>
+            <option value="zh-TW">中文（台灣）</option>
+            <option value="zh-CN">中文（大陆）</option>
+            <option value="en-US">English (US)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button id="startBtn" class="primary">
+          <span class="icon">●</span>
+          <span>Start recording</span>
+        </button>
+        <button id="stopBtn" class="secondary" disabled>
+          <span class="icon">■</span>
+          <span>Stop</span>
+        </button>
+        <button id="summarizeBtn" class="secondary">
+          <span class="icon">☼</span>
+          <span>Summarize</span>
+        </button>
+        <button id="downloadBtn" class="secondary">
+          <span class="icon">⇩</span>
+          <span>Download TXT</span>
+        </button>
+        <button id="clearBtn" class="secondary">
+          <span class="icon">✕</span>
+          <span>Clear</span>
+        </button>
+      </div>
+    </div>
+
+    <main>
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span>Transcript · 逐字稿</span>
+            <span class="badge">Live speech-to-text</span>
+          </div>
+        </div>
+        <textarea id="transcript" placeholder="Your transcript will appear here..." readonly></textarea>
+        <div class="helper">Tip: Speak clearly near the microphone. Works best in Google Chrome / Edge with good internet.</div>
+      </section>
+
+      <section class="card secondary-card">
+        <div class="card-header">
+          <div class="card-title">
+            <span>Summary</span>
+            <span class="badge">Local extractive summary</span>
+          </div>
+        </div>
+        <textarea id="summary" placeholder="Click “Summarize” to generate a short summary." readonly></textarea>
+        <div class="helper">This summary is generated in your browser using a simple keyword-based algorithm (no server / API key needed).</div>
+      </section>
+    </main>
+
+    <div class="footer">
+      <div id="footerStatus" class="status-text">Ready. If asked, allow microphone access in your browser.</div>
+      <div>
+        <span>Static site: safe to host on </span>
+        <a href="https://docs.github.com/en/pages" class="link-soft" target="_blank" rel="noreferrer">GitHub Pages</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Speech recognition setup ---
+    let recognition = null;
+    let isRecognizing = false;
+    let transcriptText = '';
+
+    const statusDot = document.getElementById('statusDot');
+    const statusLabel = document.getElementById('statusLabel');
+    const transcriptArea = document.getElementById('transcript');
+    const summaryArea = document.getElementById('summary');
+    const footerStatus = document.getElementById('footerStatus');
+
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const summarizeBtn = document.getElementById('summarizeBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const languageSelect = document.getElementById('language');
+
+    function setStatus(text, { error = false } = {}) {
+      statusLabel.textContent = text;
+      footerStatus.textContent = text;
+      footerStatus.classList.toggle('error', error);
+    }
+
+    function setRecordingUI(active) {
+      isRecognizing = active;
+      statusDot.classList.toggle('recording', active);
+      startBtn.disabled = active || !recognition;
+      stopBtn.disabled = !active || !recognition;
+    }
+
+    function initSpeechRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      if (!SpeechRecognition) {
+        setStatus('Speech recognition is not supported in this browser. Please use Chrome or Edge.', { error: true });
+        startBtn.disabled = true;
+        stopBtn.disabled = true;
+        return;
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.continuous = true; // keep listening until we call stop()
+      recognition.interimResults = true; // show partial results
+
+      recognition.onstart = () => {
+        setRecordingUI(true);
+        setStatus('Recording… speak into your microphone.');
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        let msg = 'Error: ' + (event.error || 'Unknown error');
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          msg = 'Microphone permission denied. Please allow mic access and try again.';
+        }
+        setStatus(msg, { error: true });
+        setRecordingUI(false);
+      };
+
+      recognition.onend = () => {
+        // When recognition ends unexpectedly, try to restart if we are still in recording mode.
+        if (isRecognizing) {
+          try {
+            recognition.start();
+          } catch (e) {
+            console.warn('Restart failed:', e);
+            setRecordingUI(false);
+            setStatus('Recording stopped unexpectedly. Click Start to record again.', { error: true });
+          }
+        } else {
+          setRecordingUI(false);
+          setStatus('Stopped. Click "Start" to record again.');
+        }
+      };
+
+      recognition.onresult = (event) => {
+        let finalChunk = '';
+        let interimChunk = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const res = event.results[i];
+          const text = res[0].transcript;
+          if (res.isFinal) {
+            finalChunk += text + ' ';
+          } else {
+            interimChunk += text;
+          }
+        }
+
+        if (finalChunk) {
+          transcriptText += finalChunk;
+        }
+
+        const displayText = transcriptText + (interimChunk ? '\n[' + interimChunk + ']' : '');
+        transcriptArea.value = displayText.trim();
+        transcriptArea.scrollTop = transcriptArea.scrollHeight;
+      };
+
+      setStatus('Ready. Click "Start" and allow microphone permission.');
+    }
+
+    // --- Simple extractive summarization ---
+    function summarize(text) {
+      const clean = text.trim();
+      if (!clean) {
+        return 'No transcript yet. Record something first.';
+      }
+
+      // Split into sentences (very simple, works for EN + basic Chinese)
+      const sentences = clean
+        .replace(/\s+/g, ' ')
+        .split(/(?<=[.!?。？！])/)
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      if (sentences.length === 0) {
+        return 'Unable to detect sentences to summarize.';
+      }
+
+      if (sentences.length <= 2 || clean.length < 80) {
+        return 'Text is short. Here is the original:\n' + clean;
+      }
+
+      // Build a simple word frequency map (English + basic Chinese characters)
+      const stopWords = new Set([
+        'the','a','an','and','or','but','if','in','on','at','to','for','of','with','this','that','is','are','was','were','be','been','will','shall','can','could','should','would','you','we','they','he','she','it','i','me','my','our','your','their','from','by','as','about','so','just',
+        '的','了','和','是','在','有','我','你','他','她','們','我们','你们','他们','她们','但是','如果','因为','所以','然后'
+      ]);
+
+      const freq = Object.create(null);
+      const wordRegex = /[A-Za-z0-9\u4e00-\u9fff]+/g;
+
+      sentences.forEach(sentence => {
+        const lower = sentence.toLowerCase();
+        const words = lower.match(wordRegex) || [];
+        words.forEach(w => {
+          if (!stopWords.has(w) && w.length > 1) {
+            freq[w] = (freq[w] || 0) + 1;
+          }
+        });
+      });
+
+      // Score sentences by word frequency
+      const sentenceScores = sentences.map((sentence, index) => {
+        const lower = sentence.toLowerCase();
+        const words = lower.match(wordRegex) || [];
+        let score = 0;
+        words.forEach(w => {
+          if (freq[w]) score += freq[w];
+        });
+        // Small bonus for earlier sentences
+        const positionBonus = (sentences.length - index) / sentences.length;
+        return { sentence, index, score: score + positionBonus };
+      });
+
+      // Pick top N sentences
+      const maxSentences = Math.min(3, Math.max(1, Math.round(sentences.length / 4)));
+      sentenceScores.sort((a, b) => b.score - a.score);
+      const chosen = sentenceScores.slice(0, maxSentences).sort((a, b) => a.index - b.index);
+
+      const summaryText = chosen.map(x => x.sentence).join(' ');
+      return summaryText || 'Could not generate a summary.';
+    }
+
+    // --- Event listeners ---
+    window.addEventListener('DOMContentLoaded', () => {
+      initSpeechRecognition();
+
+      startBtn.addEventListener('click', () => {
+        if (!recognition) return;
+        try {
+          recognition.lang = languageSelect.value;
+          transcriptText = transcriptText || transcriptArea.value || '';
+          recognition.start();
+        } catch (e) {
+          console.error(e);
+          setStatus('Unable to start recording. Try again or reload the page.', { error: true });
+        }
+      });
+
+      stopBtn.addEventListener('click', () => {
+        if (!recognition) return;
+        isRecognizing = false;
+        try {
+          recognition.stop();
+        } catch (e) {
+          console.error(e);
+        }
+        setRecordingUI(false);
+      });
+
+      clearBtn.addEventListener('click', () => {
+        if (isRecognizing && recognition) {
+          isRecognizing = false;
+          try { recognition.stop(); } catch (e) { }
+          setRecordingUI(false);
+        }
+        transcriptText = '';
+        transcriptArea.value = '';
+        summaryArea.value = '';
+        setStatus('Cleared transcript and summary. Ready to record again.');
+      });
+
+      summarizeBtn.addEventListener('click', () => {
+        const result = summarize(transcriptText || transcriptArea.value || '');
+        summaryArea.value = result;
+        summaryArea.scrollTop = 0;
+        setStatus('Summary generated in your browser.');
+      });
+
+      downloadBtn.addEventListener('click', () => {
+        const text = (transcriptText || transcriptArea.value || '').trim();
+        if (!text) {
+          setStatus('No transcript to download yet. Please record first.', { error: true });
+          return;
+        }
+
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+
+        const now = new Date();
+        const stamp = now.toISOString().replace(/[:T]/g, '-').split('.')[0];
+        a.href = url;
+        a.download = `cantonese-transcript-${stamp}.txt`;
+
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        setStatus('Transcript downloaded as TXT file.');
+      });
+
+      languageSelect.addEventListener('change', () => {
+        if (recognition && !isRecognizing) {
+          recognition.lang = languageSelect.value;
+        }
+      });
+    });
+  </script>
+</body>
+</html>
